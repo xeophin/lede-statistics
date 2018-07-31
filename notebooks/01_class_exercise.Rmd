@@ -1,0 +1,227 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+This R Markdown notebook is a replacement for the Jupyter Notebook, since for some reason the R Kernel does not (yet) seem to work in my Jupyter installation
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r}
+plot(cars)
+```
+
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
+```{r}
+5*10
+```
+
+## Using Variables in R
+
+```{r}
+x <- sqrt(100)
+x
+x*9
+```
+
+## Reading CSV with a function
+
+Everything in R is a function (because it is a functional language! Yay!)
+
+### Getting help with a function:
+
+```{r}
+help("read.csv")
+```
+
+### Getting data
+
+```{r}
+pr <- read.csv("pr_sep.csv")
+pr
+```
+
+Show just the head:
+
+```{r}
+head(pr)
+```
+
+(I guess we don't have objects, instead we use functions and then pass in the things we wan't them to work on.)
+
+```{r}
+head(pr, 3)
+```
+
+(Okay, in the mean time I got the R kernel to work, but I'll just continue here, it seems like a more natural way to work for R. Also, markdown. I like markdown.)
+
+## Extracting data
+Use `$` to get the Columns
+
+```{r}
+pr$SEP
+```
+
+
+```{r}
+sum(pr$Y2015)
+sum(pr$Y2016)
+sum(pr$Y2017)
+```
+
+
+Calculate averages in the previous years:
+
+```{r}
+(pr$Y2015+pr$Y2016)/2
+```
+
+Assign to its own column
+```{r}
+pr$avg1516 <- (pr$Y2015+pr$Y2016)/2
+```
+
+Get the difference
+
+```{r}
+pr$diff <- pr$Y2017 - pr$avg1516
+```
+
+Get some statistics
+```{r}
+summary(pr$diff)
+```
+
+## Plotting
+
+```{r}
+options(repr.plot.width=10, repr.plot.height=8)
+
+plot(pr$SEP,pr$Y2017)
+```
+
+Getting an even better plot
+
+```{r}
+plot(pr$SEP,pr$Y2017,type="l",ylim=c(0,140),main="Death toll in September, 2017",xlab="Day in September",ylab="Official death count")
+```
+
+Add more lines to the plot
+
+```{r}
+plot(pr$SEP,pr$Y2017,type="l",ylim=c(0,140),main="Death toll in September, 2017",xlab="Day in September",ylab="Official death count")
+lines(pr$SEP,pr$Y2015)
+lines(pr$SEP,pr$Y2016)
+```
+
+## Add rolling means
+
+Using the package `zoo`.
+
+```{r}
+library(zoo)
+```
+
+```{r}
+plot(pr$SEP,rollmean(pr$Y2017,5,fill=NA),type="l",ylim=c(0,140),col=rgb(188/255,60/255,64/255),lwd=2,xlab="Day in September",ylab="Deaths")
+lines(pr$SEP,rollmean(pr$Y2015,5,fill=NA),col="darkgrey",lwd=2)
+lines(pr$SEP,rollmean(pr$Y2016,5,fill=NA),col="darkgrey",lwd=2)
+# abline creates a line
+abline(v=20)
+abline(h=c(50,100),col="grey")
+```
+
+## Getting help
+
+Most of the time, R is written in R, and gives some output
+
+```{r}
+rgb
+```
+
+```{r}
+plot(Y2017~SEP,data=pr,type="l",ylim=c(0,140))
+lines(Y2016~SEP,data=pr)
+lines(Y2015~SEP,data=pr)
+```
+
+## Compute the excess deaths
+
+```{r}
+sum(pr$diff[pr$SEP >= 20])
+
+# alternative version, leaving the first 19 values out:
+sum(pr$diff[-(1:19)])
+```
+
+# Using dplyr
+
+```{r}
+crime <- read.csv("../data/ucr2016.csv", as.is = TRUE)
+head(crime)
+```
+
+```{r}
+head(crime)
+```
+
+```{r}
+sum(crime$Violent_crime, na.rm = TRUE)
+```
+
+## Use dplyr
+```{r}
+library(dplyr)
+```
+
+```{r}
+glimpse(crime)
+```
+
+
+Select single columns using `select()`
+```{r}
+head(select(crime,State, City, Population, Violent_crime),25)
+```
+
+Summarising/grouping stuff
+```{r}
+state <- summarise(crime,Violent_total = sum(Violent_crime,na.rm=TRUE),Population_total = sum(Population,na.rm=TRUE))
+```
+
+## Using pipes to connect operations
+
+```{r}
+crime %>%
+    group_by(State) %>%
+    summarize(Violent_total = sum(Violent_crime,na.rm=TRUE),Population_total = sum(Population,na.rm=TRUE)) %>%
+    mutate(Violent_per100=100000*Violent_total/Population_total) -> state
+```
+
+
+```{r}
+new_crime <- mutate(crime,Violent_per100=100000*Violent_crime/Population)
+head(new_crime)
+```
+
+```{r}
+options(repr.plot.width=8, repr.plot.height=6)
+
+hist(new_crime$Violent_per100, breaks=100)
+```
+
+### using a log?
+
+```{r}
+options(repr.plot.width=8, repr.plot.height=6)
+
+hist(log(new_crime$Violent_per100), breaks=100)
+```
+
